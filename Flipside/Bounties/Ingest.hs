@@ -1,6 +1,10 @@
+{-# LANGUAGE ViewPatterns #-}
+
 module Flipside.Bounties.Ingest where
 
 -- we read JSON from an endpoint and return rows of data for analytical goodness!
+
+import Control.Arrow ((&&&))
 
 import Data.Aeson (eitherDecode, FromJSON, Value, fromJSON, Result(Success))
 import Data.ByteString.Lazy.Char8 (ByteString)
@@ -93,11 +97,21 @@ Right (WalletBalance {address = "thor1lcxekvew23dju4jf7hnzhua7y0vkdx48v5sxkp",
 --}
 
 version1 :: IO ()
-version1 = fetchWith summerUrl decodeObjs >>= \rawWallets ->
-   let leftandrights = map toWallet rawWallets in
-   putStrLn ("There were " ++ show (length (lefts leftandrights)) ++ " errors "
-          ++ "in parsing the wallets.")   >>
-   let wals = sortOn (Down . balance) (rights leftandrights) in
+version1 = parseWallets summerUrl >>= walletReport
+
+parseWallets :: FilePath -> IO [WalletBalance]
+parseWallets url =
+   fetchWith url decodeObjs >>= \rawWallets ->
+   let leftandrights = map toWallet rawWallets
+       totes = "There were a total of " ++ show (length leftandrights)
+            ++ " wallets."
+       errs  = "\nThere were " ++ show (length (lefts leftandrights))
+            ++ " errors " ++ "in parsing the wallets." in
+   putStrLn (totes ++ errs) >>
+   return (rights leftandrights)
+
+walletReport :: [WalletBalance] -> IO ()
+walletReport (sortOn (Down . balance) -> wals) =
    reportWallets "top" wals               >>
    reportWallets "bottom" (reverse wals)  >>
    putStrLn "\nwut. go home, or something."
@@ -130,3 +144,27 @@ wut. go home, or something.
 
 masqueAddr :: String -> String
 masqueAddr s = take 10 s ++ "..." ++ drop 37 s
+
+-- So, now: version 2: we read plusses and minuses and merge them.
+
+-- Fortunately, we have Map.unionWithKey
+
+walletMap :: FilePath -> IO (Map String WalletBalance)
+walletMap url = Map.fromList . map (address &&& id) <$> parseWallets url
+
+-- hehehehe ... I'm 'bout ta do summthin EEVEEELL! ;)
+
+instance Num WalletBalance where
+   w1 + w2  = WalletBalance (address w1) (balance w1 + balance w2)
+   w1 * w2  = undefined
+   abs w    = w { balance = abs (balance w) }
+   signum w = w { balance = signum (balance w) }
+   fromInteger a = WalletBalance "foo" (USD (toRational a))
+   negate w = w { balance = negate (balance w) }
+
+version2 :: IO ()
+version2 = 
+   walletMap summerUrl >>= \plusses ->
+   walletMap winterUrl >>= \minuses ->
+   let wallets = Map.unionsWith (-) [plusses, minuses]
+   in  walletReport (Map.elems wallets)
