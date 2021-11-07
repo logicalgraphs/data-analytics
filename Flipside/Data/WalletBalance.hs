@@ -1,4 +1,4 @@
-module Flipside.Types.WalletBalance where
+module Flipside.Data.WalletBalance where
 
 -- We declare the Wallet-type
 

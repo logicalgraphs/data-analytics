@@ -12,7 +12,7 @@ import qualified Data.Map as Map
 
 import Flipside.Control.Scanner (fetchWith, decodeObjs)
 import Flipside.Reports.WalletBalances (walletReport)
-import Flipside.Types.WalletBalance
+import Flipside.Data.WalletBalance
          (WalletBalance(WalletBalance), address, toWallet)
 
 summerUrl :: FilePath

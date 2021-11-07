@@ -5,7 +5,7 @@ module Flipside.Reports.WalletBalances where
 import Data.List (sortOn)
 import Data.Ord    -- for Down
 
-import Flipside.Types.WalletBalance (WalletBalance(WalletBalance), balance)
+import Flipside.Data.WalletBalance (WalletBalance(WalletBalance), balance)
 
 -- 1HaskellADay modules
 
