@@ -2,18 +2,25 @@ module Flipside.Bounties.Ingest where
 
 -- we read JSON from an endpoint and return rows of data for analytical goodness!
 
-import Control.Arrow ((&&&))
+import Control.Arrow ((&&&), second)
 
 import Data.Either (lefts, rights)
 import Data.Map (Map)
 import qualified Data.Map as Map
+import Data.Monoid (getSum)
+
+-- 1HaskellADay modules
+
+import Data.Bag (Bag)
+import qualified Data.Bag as Bag
+import Data.Monetary.USD (doubledown)
 
 -- Flipside modules
 
 import Flipside.Control.Scanner (fetchWith, decodeObjs)
 import Flipside.Reports.WalletBalances (walletReport)
 import Flipside.Data.WalletBalance
-         (WalletBalance(WalletBalance), address, toWallet)
+         (WalletBalance(WalletBalance), address, toWallet, balance)
 
 summerUrl :: FilePath
 summerUrl = "https://api.flipsidecrypto.com/api/v2/queries/"
@@ -71,8 +78,42 @@ walletMap :: FilePath -> IO (Map String WalletBalance)
 walletMap url = Map.fromList . map (address &&& id) <$> parseWallets url
 
 version2 :: IO ()
-version2 = 
+version2 = thorWallets >>= walletReport
+
+thorWallets :: IO [WalletBalance]
+thorWallets = 
    walletMap summerUrl >>= \plusses ->
    walletMap winterUrl >>= \minuses ->
    let wallets = Map.unionsWith (-) [plusses, minuses]
-   in  walletReport (Map.elems wallets)
+   in  return (Map.elems wallets)
+
+-- version 3: groupBy log ... but how do we do that? a list of functions? idk.
+
+logs :: [Double] -> Bag Int
+logs = Map.filterWithKey (flip (const (> 0)))
+     . Bag.fromList . map (floor . logBase 10)
+
+version3 :: IO ()
+version3 =
+   thorWallets >>= 
+   mapM_ (print . second getSum)
+         . Map.toList . logs . map (doubledown . balance)
+
+{--
+>>> wals <- thorWallets 
+There were a total of 11133 wallets.
+There were 0 errors in parsing the wallets.
+There were a total of 8434 wallets.
+There were 0 errors in parsing the wallets.
+
+>>> let chart = logs (map (doubledown . balance) wals)
+>>> mapM_ (print . second getSum) (Map.toList chart)
+(1,2970)
+(2,1838)
+(3,2047)
+(4,814)
+(5,238)
+(6,40)
+(7,6)
+(8,2)
+--}
