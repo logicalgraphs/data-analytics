@@ -2,10 +2,14 @@ module Flipside.Data.WalletBalance where
 
 -- We declare the Wallet-type
 
+import Control.Arrow ((&&&))
 import Data.Aeson (Value, Result(Success), fromJSON)
+import Data.Either (lefts, rights)
 import Data.List (partition, isSuffixOf)
 import Data.Map (Map)
 import qualified Data.Map as Map
+
+import Flipside.Control.Scanner (fetchWith, decodeObjs)
 
 -- 1HaskellADay modules:
 
@@ -61,3 +65,38 @@ instance Num WalletBalance where
    signum w = w { balance = signum (balance w) }
    fromInteger a = WalletBalance "foo" (USD (toRational a))
    negate w = w { balance = negate (balance w) }
+
+-- now let's get the wallet balances from the amounts added to and removed from
+
+summerUrl :: FilePath
+summerUrl = "https://api.flipsidecrypto.com/api/v2/queries/"
+         ++ "abe74b5e-884a-4d67-a19f-a5b6fca6038f/data/latest"
+
+winterUrl :: FilePath
+winterUrl = "https://api.flipsidecrypto.com/api/v2/queries/"
+         ++ "7a0de1a8-8ac1-42d6-a52e-0773f6e4e231/data/latest"
+
+parseWallets :: FilePath -> IO [WalletBalance]
+parseWallets url =
+   fetchWith url decodeObjs >>= \rawWallets ->
+   let leftandrights = map toWallet rawWallets
+       totes = "There were a total of " ++ show (length leftandrights)
+            ++ " wallets."
+       errs  = "\nThere were " ++ show (length (lefts leftandrights))
+            ++ " errors " ++ "in parsing the wallets." in
+   putStrLn (totes ++ errs) >>
+   return (rights leftandrights)
+
+-- So, now: we read plusses and minuses and merge them.
+
+-- Fortunately, we have Map.unionWithKey ... or, actually: Map.unionsWith
+
+walletMap :: FilePath -> IO (Map String WalletBalance)
+walletMap url = Map.fromList . map (address &&& id) <$> parseWallets url
+
+thorWallets :: IO [WalletBalance]
+thorWallets =
+   walletMap summerUrl >>= \plusses ->
+   walletMap winterUrl >>= \minuses ->
+   let wallets = Map.unionsWith (-) [plusses, minuses]
+   in  return (Map.elems wallets)
