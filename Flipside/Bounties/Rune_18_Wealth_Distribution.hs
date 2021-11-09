@@ -1,4 +1,4 @@
-module Flipside.Bounties.Ingest where
+module Flipside.Bounties.Rune_18_Wealth_Distribution where
 
 -- we read JSON from an endpoint and return rows of data for analytical goodness!
 
