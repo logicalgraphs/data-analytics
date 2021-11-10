@@ -19,6 +19,7 @@ import Flipside.Data.LPsbyWalletTVL
           (LPbyWalletTVL, decodeLWTs, pool, wallet_address, tvl_rune)
 import Flipside.Data.WalletBalance
           (thorWallets, WalletBalance(WalletBalance))
+import Flipside.Reports.Charts.Pie (toPieChart)
 import Flipside.Reports.Charts.SQL (chart)
 
 -- 1HaskellADay modules:
@@ -185,3 +186,23 @@ There were 0 errors in parsing the wallets.
 ("ETH.USDT-0",1)
 ("ETH.YFI-0X",1)
 --}
+
+-- Version 5: ... as a pie chart
+
+version5 :: IO ()
+version5 = whalesLPsM >>= toPieChart . whalesPerLP
+
+-- Version 6: ... as a bar chart via SQL
+
+data KVpair = KV String Int
+
+toKV :: (String, Int) -> KVpair
+toKV = uncurry KV
+
+instance Univ KVpair where explode (KV a b) = [quote a, show b]
+
+version6 :: IO ()
+version6 = whalesLPsM >>= toBarChart . whalesPerLP
+
+toBarChart :: [(String, Int)] -> IO ()
+toBarChart = mapM_ putStrLn . chart (words "LP n_whales") . map toKV
