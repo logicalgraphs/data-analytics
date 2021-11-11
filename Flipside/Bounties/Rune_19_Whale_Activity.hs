@@ -5,22 +5,17 @@ module Flipside.Bounties.Rune_19_Whale_Activity where
 -- Whales here mean 10k+ RUNE wallets (not RUNE USD, so ... there.)
 -- But we can convert RUNE_USD to RUNE, because RUNE is currently ... $12.92
 
-import Control.Arrow ((&&&), (***))
-
 import Data.List (sortOn)
-import Data.Map (Map)
 import qualified Data.Map as Map
-import Data.Maybe (fromJust)
-import Data.Ord   -- for Down
 import qualified Data.Set as Set
+import Data.Ord    -- for Down
 
-import Flipside.Control.Scanner (fetchWith)
-import Flipside.Data.LPsbyWalletTVL
-          (LPbyWalletTVL, decodeLWTs, pool, wallet_address, tvl_rune)
+import Flipside.Data.LPsbyWalletTVL (lps, LpMap)
 import Flipside.Data.WalletBalance
           (thorWallets, WalletBalance(WalletBalance))
 import Flipside.Reports.Charts.Pie (toPieChart)
 import Flipside.Reports.Charts.SQL (chart)
+import Flipside.Reports.Utils (printLPs, printList)
 
 -- 1HaskellADay modules:
 
@@ -63,71 +58,8 @@ version1 = whalesM >>=
 
 -- Version 2: we go FAR a-field to map wallets to LPs
 
-springUrl, fallUrl :: FilePath
-springUrl = "https://api.flipsidecrypto.com/api/v2/queries/"
-         ++ "23cfd730-c60a-45bf-9bc4-cde2a10e23a3/data/latest"
-fallUrl = "https://api.flipsidecrypto.com/api/v2/queries/"
-         ++ "6a4d0d06-cbce-431f-9798-bcf818578a48/data/latest"
-
-type RawLpMapKey = (String, Maybe String)
-type LpMapKey = (String, String)
-type LpMapEntry a = (LpMapKey, a)
-type LpMap a = Map LpMapKey a
-
-lps :: IO (LpMap Double)
-lps = fetchWith springUrl decodeLWTs >>= \adderal ->
-      fetchWith fallUrl   decodeLWTs >>= \nadaral ->
-      let maps = map (Map.fromList . lp2Map) [adderal, nadaral]
-          mergedMap = Map.unionsWith (-) maps
-          withWallets = Map.filterWithKey (\k _v -> snd k /= Nothing) mergedMap 
-          realLps = Map.mapKeys (take 10 *** fromJust) withWallets
-      in  return (Map.filter (> 1) realLps)
-
-lp2Map :: [LPbyWalletTVL] -> [(RawLpMapKey, Double)]
-lp2Map = map ((pool &&& wallet_address) &&& tvl_rune)
-
-{--
->>> ls <- lps
->>> length ls
-7559
-
->>> head $ Map.toList ls 
-(("BCH.BCH",Nothing),0.0)
-
-whoops, let's filter out the nothings ... *rewrite, rewrite, rewrite
-
-So, now:
-
->>> head $ Map.toList ls
-(("BCH.BCH","qp38elk9pawlanlfjlxladdy62nspce2rsx2mf9j0q"),0.0)
-
-... is every balance zero?
-
->>> let bals = Map.filter (> 0) ls
->>> head $ Map.toList bals
-(("BCH.BCH","thor10ma5hwscwm0hv3qm4h4ny3gnf0z4gc8zatk2f4"),36.44368104)
-
-Nupe! Good! ... let's at that to the lps returned
-
->>> ls <- lps
->>> length ls
-6036
-
-So:
---}
-
 version2 :: IO ()
 version2 = putStrLn "LP-HODLrs\n" >> lps >>= printLPs
-
-printLPs :: Show a => Ord a => LpMap a -> IO ()
-printLPs = printList . sortOn (Down . snd) . Map.toList
-
-printList :: Show a => [a] -> IO ()
-printList lps =
-   let len = length lps
-       frist = map show (take 2 lps)
-       lest =  map show (drop (len - 2) lps) in
-   mapM_ putStrLn (frist ++ ("...":lest))
 
 {--
 >>> version2
