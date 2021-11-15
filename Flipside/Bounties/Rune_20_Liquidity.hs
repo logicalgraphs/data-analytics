@@ -37,3 +37,15 @@ reportWallets action lps = let wal = walletsFrom lps in
    putStrLn ("There are " ++ show (Set.size wal) ++ " unique wallets that "
             ++ action ++ " liquidity pools.") >>
    return wal
+
+-- Version 1: now we intersect the two to find wallets that removed liquidity
+-- after having added liquidity
+
+version1 :: IO ()
+version1 =
+   lpAdditions    >>= \addz ->
+   lpSubtractions >>= \subs ->
+   let [a, s] = map walletsFrom [addz, subs]
+       addedThenRemovedLiq = Set.intersection a s
+   in  putStrLn ("Unique wallet addresses that added liquidity then removed "
+              ++ "liquidity: " ++ show (length addedThenRemovedLiq))
