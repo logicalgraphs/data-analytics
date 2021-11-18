@@ -23,9 +23,14 @@ data MeteorShowerBid =
 
 instance FromJSON MeteorShowerBid where
    parseJSON = withObject "MeteorShowerBid" $ \o ->
-      MSB <$> o .: "METEOROLOGIST"
+      MSB <$> (dequote <$> o .: "METEOROLOGIST")
           <*> o .: "N_BIDS"
           <*> (o .: "TOTAL_BID_UST" >>= return . USD . fromRational)
+
+-- f'n quoted IDs: who thought that was a good IDea?
+
+dequote :: String -> String
+dequote = init . tail
 
 decodeMSBs :: ByteString -> Either String [MeteorShowerBid]
 decodeMSBs = eitherDecode
