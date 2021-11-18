@@ -5,8 +5,6 @@ import Control.Arrow ((&&&))
 import Data.Map (Map)
 import qualified Data.Map as Map
 
-import System.Environment (getEnv)
-
 -- from my CryptoCoin repository
 
 import Data.CryptoCurrency.Utils (fileProcessor)
@@ -24,13 +22,11 @@ snarfLunaDegen (_id:addr:score:_whatevs) =
 snarfLunaDegen line = error ("Can't read " ++ show line)
 
 degenFile :: FilePath
-degenFile = "articles/bounty-hunts/levana/scores_1_to_30_2021-11-17.csv"
+degenFile = "smol.csv"
 
 readLunaDegens :: FilePath -> IO (Map String LunaDegen)
 readLunaDegens file =
-   getEnv "CRYPTOCOIN_DIR" >>= \dir ->
-   let degenf = dir ++ ('/':file) in
-   Map.fromList . map (address &&& id) <$> fileProcessor snarfLunaDegen degenf
+   Map.fromList . map (address &&& id) <$> fileProcessor snarfLunaDegen file
 
 {--
 >>> degens <- readLunaDegens degenFile
@@ -40,4 +36,16 @@ readLunaDegens file =
 
 >>> Map.size degens
 751076
+
+... that was for the biggie data set. Now let's try it for smol:
+
+>>> degens <- readLunaDegens degenFile
+>>> head (Map.toList degens)
+("terra100d87dhfca4x023yphu0qfslwnn0vmhgxqpdy3",
+ LD {address = "terra100d87dhfca4x023yphu0qfslwnn0vmhgxqpdy3", score = 28})
+
+>>> Map.size degens
+6340
+
+TA-DAH!
 --}

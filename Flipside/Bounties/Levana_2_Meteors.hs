@@ -79,4 +79,4 @@ toIxn = map (uncurry Ix) . zip [1..]
 version2 :: IO ()
 version2 = meteorDegens >>=
            writeFile "smol.csv" . unlines . ("id,meterologist,degen":)
-                . map (weave . explode) . Map.elems
+                . map (weave . explode) . toIxn . Map.elems
