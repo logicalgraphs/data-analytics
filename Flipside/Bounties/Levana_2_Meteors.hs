@@ -16,11 +16,6 @@ import qualified Data.Set as Set
 import Flipside.Data.MeteorShowerBids (lps, MeteorShowerBid, meteorologist)
 import Flipside.Data.LunaDegens (readLunaDegens, LunaDegen, score, degenFile)
 
--- 1HaskellADay modules
-
-import Control.List (weave)
-import Control.Presentation (Univ, explode)
-
 -- version 0: first of all, we want to merge the luna degen scores into the 
 -- meteor shower participants
 
@@ -59,24 +54,3 @@ version1 =
 >>> version1
 The average degen score of a meteor participant is: 15
 --}
-
--- version 2: let's winnow down that 78 mb CSV monstrosity!
-
-data Indexed a = Ix Int a
-   deriving (Eq, Ord, Show)
-
-instance Univ a => Univ (Indexed a) where
-   explode (Ix n a) = show n : explode a
-
--- which means:
-
-instance Univ MeteorDegen where
-   explode (MD m i) = [meteorologist m, show i]
-
-toIxn :: [a] -> [Indexed a]
-toIxn = map (uncurry Ix) . zip [1..]
-
-version2 :: IO ()
-version2 = meteorDegens >>=
-           writeFile "smol.csv" . unlines . ("id,meterologist,degen":)
-                . map (weave . explode) . toIxn . Map.elems
