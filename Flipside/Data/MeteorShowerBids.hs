@@ -39,3 +39,14 @@ lpMeteors = fetchWith showerUrl decodeMSBs
 
 lps :: IO (Map String MeteorShowerBid)
 lps = Map.fromList . map (meteorologist &&& id) <$> lpMeteors
+
+{--
+>>> meteors <- lps
+>>> Map.size meteors
+6340
+>>> head (Map.toList meteors)
+("\"terra100d87dhfca4x023yphu0qfslwnn0vmhgxqpdy3\"",
+ MSB {meteorologist = "\"terra100d87dhfca4x023yphu0qfslwnn0vmhgxqpdy3\"", 
+      bids = 1, 
+      bidTotal = $25.00})
+--}
