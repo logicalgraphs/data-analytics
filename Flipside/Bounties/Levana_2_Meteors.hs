@@ -86,6 +86,17 @@ avg x = sum x `div` length x
 version3 :: IO ()
 version3 = barMeteorDegens bids
 
+{--
+>>> version3
+alphabet=[{letter: '1', frequency: 15},
+          {letter: '10', frequency: 15},
+          {letter: '11', frequency: 15},
+          {letter: '12', frequency: 16},...,
+          {letter: '8', frequency: 17},
+          {letter: '9', frequency: 11},
+          {letter: '90', frequency: 23}]
+--}
+
 -- version 4: let's find the bid range of our meteor bidder domain
 
 version4 :: IO ()
@@ -96,7 +107,21 @@ version4 =
 minimax :: [MeteorDegen] -> (USD, USD)
 minimax = (minimum &&& maximum) . map (bidTotal . metes)
 
+{--
+>>> version4
+The min bid and max bid are: ($8.00,$74195.00)
+--}
+
 -- version 5: let's look at total bids (logarithmic scale) to degen score
 
 version5 :: IO ()
 version5 = barMeteorDegens (floor . logBase 10 . doubledown . bidTotal)
+
+{--
+>>> version5
+alphabet=[{letter: '0', frequency: 14},
+          {letter: '1', frequency: 15},
+          {letter: '2', frequency: 15},
+          {letter: '3', frequency: 17},
+          {letter: '4', frequency: 19}]
+--}
